@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>１－４掲示板</title>
     
-    <!-- PWA用の設定 -->
     <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -21,7 +20,7 @@
         label { display: block; font-weight: bold; margin-bottom: 5px; }
         input[type="text"], input[type="date"], textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .submit-btn { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
+        .error { color: red; font-weight: bold; text-align: center; }
         .post-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; border-left: 5px solid #007bff; }
         .subject { font-size: 18px; font-weight: bold; color: #007bff; margin: 0 0 10px 0; }
         .meta { font-size: 14px; color: #666; margin-bottom: 10px; }
@@ -30,7 +29,6 @@
         .delete-input { width: 90px !important; padding: 4px !important; font-size: 12px; }
         .delete-btn { background-color: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; width: auto; }
 
-        /* 👇 iPhone用 強制ホーム画面追加モーダルのスタイル */
         #pwa-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.9); color: white; z-index: 9999;
@@ -38,7 +36,6 @@
         }
         #pwa-modal h2 { color: #ffc107; font-size: 24px; margin-bottom: 20px; }
         #pwa-modal p { font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-        .share-icon { width: 25px; vertical-align: middle; margin: 0 5px; }
         .plus-box { display: inline-block; border: 1px solid white; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
     </style>
 
@@ -48,30 +45,22 @@
             .then(() => console.log('Service Worker Registered'));
         }
 
-        // 通知の許可
         function requestNotificationPermission() {
             if (!('Notification' in window)) {
                 alert('このブラウザは通知に対応していません。');
                 return;
             }
             Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    alert('通知が許可されました！');
-                } else {
-                    alert('通知がブロックされました。');
-                }
+                if (permission === 'granted') alert('通知が許可されました！');
             });
         }
 
-        // 📱 iPhone(iOS)の判定と、すでにPWA（ホーム画面）から開かれているかの判定
         window.addEventListener('DOMContentLoaded', () => {
             const isOldiOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             const isNewiOS = navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /Macintosh/.test(navigator.userAgent);
-            const isRunningOniOS = isOldiOS || isNewiOS; // iPhone・iPadの判定
-            
-            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; // すでにPWAとして動いているか
+            const isRunningOniOS = isOldiOS || isNewiOS;
+            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
-            // 「iPhone」かつ「まだホーム画面に追加していない（普通のSafariブラウザ）」場合のみ、強制画面を表示
             if (isRunningOniOS && !isStandalone) {
                 document.getElementById('pwa-modal').style.display = 'flex';
             }
@@ -80,20 +69,32 @@
 </head>
 <body>
 
-    <!-- 👇 iPhoneユーザーにだけ強制表示される案内ブロック -->
     <div id="pwa-modal">
         <h2>📱 ホーム画面に追加してください</h2>
         <p>
             「１－４掲示板」で宿題や持ち物の通知を受け取るには、<br>
             アプリとしてホーム画面に追加する必要があります。<br><br>
-            <strong>【追加手順】</strong><br>
-            1. Safari画面の下にある<strong>「共有ボタン」</strong>（四角から矢印が出ているマーク）をタップします。<br>
-            2. メニューを下にスクロールし、<strong>「ホーム画面に追加」</strong> <span class="plus-box">＋</span> をタップします。<br><br>
-            追加後、ホーム画面にできたアイコンからもう一度開いてください！
+            1. Safariの下にある<strong>「共有ボタン」</strong>をタップします。<br>
+            2. <strong>「ホーム画面に追加」</strong> をタップします。
         </p>
     </div>
 
     <h1>📝 １－４掲示板</h1>
+
+    {% if not is_logged_in %}
+    <!-- 🔒 ログインしていないときに表示する「合言葉入力画面」 -->
+    <div class="form-box" style="margin-top: 50px; text-align: center;">
+        <h3>🔒 クラスの合言葉を入力してください</h3>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <input type="text" name="login_password" placeholder="合言葉を入力" required style="text-align: center; font-size: 18px; padding: 10px;">
+            </div>
+            <button type="submit" class="submit-btn" style="background-color: #007bff;">掲示板を見る</button>
+        </form>
+    </div>
+    {% else %}
+    <!-- 🔓 ログイン（合言葉認証）が成功したときだけ見えるメイン中身 -->
     
     <button class="notification-btn" onclick="requestNotificationPermission()">🔔 スマホで通知を受け取る設定をする</button>
 
@@ -147,6 +148,7 @@
         <p>現在、連絡はありません。全員忘れ物なし！</p>
         {% endfor %}
     </div>
+    {% endif %}
 
 </body>
 </html>

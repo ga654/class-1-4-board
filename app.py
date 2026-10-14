@@ -1,8 +1,9 @@
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
+# セッション（記憶）を使うための秘密の鍵（適当な英数字でOK）
+app.secret_key = "class_1_4_secret_key_999"
 
-# 掲示板のデータを保存するリスト
 homework_list = [
     {
         "id": 1,
@@ -13,15 +14,27 @@ homework_list = [
     }
 ]
 
-# クラス共通の合言葉
 CLASS_PASSWORD = "1234"
 
 
-# メイン画面（表示と投稿）
 @app.route("/", methods=["GET", "POST"])
 def index():
     error = None
-    if request.method == "POST":
+
+    # 1. ログイン（閲覧許可）の処理
+    if request.method == "POST" and "login_password" in request.form:
+        login_password = request.form.get("login_password")
+        if login_password == CLASS_PASSWORD:
+            session["is_logged_in"] = True
+            return redirect(url_for("index"))
+        else:
+            error = "合言葉が違います！"
+
+    # 2. 新しい宿題の投稿処理
+    elif request.method == "POST":
+        if not session.get("is_logged_in"):
+            return redirect(url_for("index"))
+
         subject = request.form.get("subject")
         content = request.form.get("content")
         belongings = request.form.get("belongings")
@@ -41,22 +54,27 @@ def index():
         else:
             error = "合言葉が違います！投稿できませんでした。"
 
+    # まだ合言葉を入れていない人は、閲覧制限用の画面を表示する
+    is_logged_in = session.get("is_logged_in", False)
     return render_template(
-        "index.html", homework_list=homework_list, error=error
+        "index.html",
+        homework_list=homework_list,
+        error=error,
+        is_logged_in=is_logged_in,
     )
 
 
-# ❌ 削除用の処理（ここが足りなかったか、位置がズレていました）
 @app.route("/delete/<int:post_id>", methods=["POST"])
 def delete_post(post_id):
-    password = request.form.get("delete_password")
+    if not session.get("is_logged_in"):
+        return redirect(url_for("index"))
 
+    password = request.form.get("delete_password")
     if password == CLASS_PASSWORD:
         global homework_list
         homework_list = [
             post for post in homework_list if post["id"] != post_id
         ]
-
     return redirect(url_for("index"))
 
 
