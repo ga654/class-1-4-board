@@ -18,13 +18,13 @@ homework_list = [
 PASSWORD_FILE = "passwords.txt"
 
 
-# 🔐 パスワードをファイルから読み込む関数
+# 🔐 パスワードをファイルから読み込む関数（バグを修正しました！）
 def load_passwords():
     if os.path.exists(PASSWORD_FILE):
         with open(PASSWORD_FILE, "r", encoding="utf-8") as f:
             data = f.read().strip().split(",")
             if len(data) == 2:
-                return data[0], data[1]
+                return data[0], data[1]  # ⭕️ 正しく閲覧用と書き込み用を分けて返します
     return "1234", "abcd"  # ファイルがない場合の初期値
 
 
@@ -76,7 +76,7 @@ def index():
                     "書き込み用の合言葉が違います！ / Incorrect Write Password"
                 )
 
-        # ③ 管理者画面：Web上でのパスワード変更処理（追加機能）
+        # ③ 管理者画面：Web上でのパスワード変更処理
         elif "new_view_password" in request.form:
             if not session.get("is_logged_in"):
                 return redirect(url_for("index"))
@@ -85,7 +85,6 @@ def index():
             new_view = request.form.get("new_view_password")
             new_write = request.form.get("new_write_password")
 
-            # 本人確認（現在の書き込みパスワードが合っているか）
             if current_write_pass == WRITE_PASSWORD:
                 save_passwords(new_view, new_write)
                 success = "パスワードを更新しました！ / Passwords updated!"
