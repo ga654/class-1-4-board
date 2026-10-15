@@ -8,7 +8,7 @@ app.secret_key = "class_1_4_secret_key_999"
 # ========================================================
 # 🔗 【重要】ここにさっきコピーしたGASのウェブアプリURLを貼り付けてください！
 # ========================================================
-GAS_WEB_APP_URL = https://script.google.com/macros/s/AKfycbzm1GqV7MFdApcG0QwKlluIBbTBW0tOYfBgpC0XwPM49c2cjQMDF2pZ9ATr50SjPFt1/exec"
+GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwNB_sbSf17flMiXR4FX0eOM1V6FH_w3VkKUrY0BNLUMT9JrZ6RouXD5GoQJlk23inM/exec"
 
 
 # 📊 スプレッドシートからデータを取得する関数
