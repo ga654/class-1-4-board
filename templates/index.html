@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>１－４掲示板</title>
+    <title>１－４掲示板 / Class 1-4 Board</title>
     
+    <!-- PWA用の設定 -->
     <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -18,6 +19,7 @@
         .form-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .form-group { margin-bottom: 10px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .lang-en { font-weight: normal; font-size: 13px; color: #666; display: block; margin-top: 2px; }
         input[type="text"], input[type="date"], textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .submit-btn { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
         .error { color: red; font-weight: bold; text-align: center; }
@@ -29,14 +31,15 @@
         .delete-input { width: 90px !important; padding: 4px !important; font-size: 12px; }
         .delete-btn { background-color: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; width: auto; }
 
+        /* 📱 iPhone専用 強制ホーム画面追加モーダルのスタイル */
         #pwa-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.9); color: white; z-index: 9999;
             text-align: center; justify-content: center; align-items: center; flex-direction: column; padding: 20px; box-sizing: border-box;
         }
-        #pwa-modal h2 { color: #ffc107; font-size: 24px; margin-bottom: 20px; }
-        #pwa-modal p { font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-        .plus-box { display: inline-block; border: 1px solid white; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+        #pwa-modal h2 { color: #ffc107; font-size: 22px; margin-bottom: 15px; }
+        #pwa-modal p { font-size: 14px; line-height: 1.6; margin-bottom: 20px; text-align: left; max-width: 450px; }
+        .plus-box { display: inline-block; border: 1px solid white; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
     </style>
 
     <script>
@@ -47,11 +50,15 @@
 
         function requestNotificationPermission() {
             if (!('Notification' in window)) {
-                alert('このブラウザは通知に対応していません。');
+                alert('This browser does not support notifications. / このブラウザは通知に対応していません。');
                 return;
             }
             Notification.requestPermission().then(permission => {
-                if (permission === 'granted') alert('通知が許可されました！');
+                if (permission === 'granted') {
+                    alert('Notifications enabled! / 通知が許可されました！');
+                } else {
+                    alert('Notifications blocked. / 通知がブロックされました。');
+                }
             });
         }
 
@@ -69,83 +76,89 @@
 </head>
 <body>
 
+    <!-- 📱 iPhoneユーザー用ロック画面（日・英対応） -->
     <div id="pwa-modal">
-        <h2>📱 ホーム画面に追加してください</h2>
+        <h2>📱 ホーム画面に追加してください / Add to Home Screen</h2>
         <p>
-            「１－４掲示板」で宿題や持ち物の通知を受け取るには、<br>
-            アプリとしてホーム画面に追加する必要があります。<br><br>
-            1. Safariの下にある<strong>「共有ボタン」</strong>をタップします。<br>
-            2. <strong>「ホーム画面に追加」</strong> をタップします。
+            <strong>【日本語】</strong><br>
+            「１－４掲示板」で通知を受け取るには、アプリとしてホーム画面に追加する必要があります。<br>
+            1. Safari画面の下にある<strong>「共有ボタン」</strong>をタップします。<br>
+            2. <strong>「ホーム画面に追加」</strong>をタップします。<br><br>
+            <strong>【English】</strong><br>
+            To receive notifications from this board, you need to add it to your Home Screen.<br>
+            1. Tap the <strong>"Share" button</strong> at the bottom of Safari.<br>
+            2. Scroll down and tap <strong>"Add to Home Screen"</strong>.
         </p>
     </div>
 
     <h1>📝 １－４掲示板</h1>
 
     {% if not is_logged_in %}
-    <!-- 🔒 ログインしていないときに表示する「合言葉入力画面」 -->
+    <!-- 🔒 閲覧制限画面（日・英対応） -->
     <div class="form-box" style="margin-top: 50px; text-align: center;">
-        <h3>🔒 クラスの合言葉を入力してください</h3>
+        <h3>🔒 クラスの合言葉を入力してください<br><span style="font-size: 16px; color:#666; font-weight:normal;">Please enter the class password</span></h3>
         {% if error %}<p class="error">{{ error }}</p>{% endif %}
         <form method="POST">
             <div class="form-group">
-                <input type="text" name="login_password" placeholder="合言葉を入力" required style="text-align: center; font-size: 18px; padding: 10px;">
+                <input type="text" name="login_password" placeholder="合言葉 / Password" required style="text-align: center; font-size: 18px; padding: 10px;">
             </div>
-            <button type="submit" class="submit-btn" style="background-color: #007bff;">掲示板を見る</button>
+            <button type="submit" class="submit-btn" style="background-color: #007bff;">掲示板を見る / View Board</button>
         </form>
     </div>
     {% else %}
-    <!-- 🔓 ログイン（合言葉認証）が成功したときだけ見えるメイン中身 -->
+    <!-- 🔓 メイン画面（日・英対応） -->
     
-    <button class="notification-btn" onclick="requestNotificationPermission()">🔔 スマホで通知を受け取る設定をする</button>
+    <button class="notification-btn" onclick="requestNotificationPermission()">🔔 通知を受け取る設定をする / Enable Notifications</button>
 
     <div class="form-box">
-        <h3>📢 新しい連絡を投稿する</h3>
+        <h3>📢 新しい連絡を投稿する / Post New Update</h3>
         {% if error %}<p class="error">{{ error }}</p>{% endif %}
         <form method="POST">
             <div class="form-group">
-                <label>教科</label>
-                <input type="text" name="subject" placeholder="例：数学、国語" required>
+                <label>教科 <span class="lang-en">Subject</span></label>
+                <input type="text" name="subject" placeholder="例：数学、国語 / e.g. Math, Japanese" required>
             </div>
             <div class="form-group">
-                <label>宿題・連絡内容</label>
-                <textarea name="content" rows="3" placeholder="例：ワークP.24〜25" required></textarea>
+                <label>宿題・連絡内容 <span class="lang-en">Homework / Content</span></label>
+                <textarea name="content" rows="3" placeholder="例：ワークP.24〜25 / e.g. Workbook P.24-25" required></textarea>
             </div>
             <div class="form-group">
-                <label>明日必要な持ち物（空欄でもOK）</label>
-                <input type="text" name="belongings" placeholder="例：定規、コンパス">
+                <label>明日必要な持ち物（空欄でもOK） <span class="lang-en">Belongings needed for tomorrow (Optional)</span></label>
+                <input type="text" name="belongings" placeholder="例：定規、コンパス / e.g. Ruler, Compass">
             </div>
             <div class="form-group">
-                <label>提出・確認の期限日</label>
+                <label>提出・確認の期限日 <span class="lang-en">Deadline</span></label>
                 <input type="date" name="deadline" required>
             </div>
             <div class="form-group">
-                <label style="color: #dc3545;">クラスの合言葉（投稿の認証用）</label>
-                <input type="text" name="password" placeholder="合言葉を入力" required>
+                <label style="color: #dc3545;">クラスの合言葉 <span class="lang-en" style="color: #dc3545;">Class Password (for verification)</span></label>
+                <input type="text" name="password" placeholder="合言葉を入力 / Enter Password" required>
             </div>
-            <button type="submit" class="submit-btn">掲示板にのせる</button>
+            <button type="submit" class="submit-btn">掲示板にのせる / Post to Board</button>
         </form>
     </div>
 
     <hr>
 
-    <h3>📌 現在の連絡一覧</h3>
+    <h3>📌 現在の連絡一覧 / Current Updates</h3>
     <div>
         {% for post in homework_list %}
         <div class="post-card">
             <p class="subject">【{{ post.subject }}】</p>
-            <p class="meta">⏰ 期限: <strong>{{ post.deadline }}</strong></p>
-            <p><strong>内容:</strong><br>{{ post.content }}</p>
+            <p class="meta">⏰ 期限 / Deadline: <strong>{{ post.deadline }}</strong></p>
+            <p><strong>内容 / Content:</strong><br>{{ post.content }}</p>
             {% if post.belongings %}
-            <p>🎒 <strong>持ち物:</strong> <span class="badge">{{ post.belongings }}</span></p>
+            <p>🎒 <strong>持ち物 / Belongings:</strong> <span class="badge">{{ post.belongings }}</span></p>
             {% endif %}
             
+            <!-- ❌ 削除用フォーム -->
             <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" class="delete-form">
-                <input type="text" name="delete_password" placeholder="合言葉" required class="delete-input">
-                <button type="submit" class="delete-btn">❌ 消す</button>
+                <input type="text" name="delete_password" placeholder="合言葉 / Pass" required class="delete-input">
+                <button type="submit" class="delete-btn">❌ 消す / Delete</button>
             </form>
         </div>
         {% else %}
-        <p>現在、連絡はありません。全員忘れ物なし！</p>
+        <p>現在、連絡はありません。全員忘れ物なし！<br>No updates right now. No homework left!</p>
         {% endfor %}
     </div>
     {% endif %}
