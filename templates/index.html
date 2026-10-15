@@ -161,7 +161,19 @@
         <p>現在、連絡はありません。全員忘れ物なし！<br>No updates right now. No homework left!</p>
         {% endfor %}
     </div>
-    {% endif %}
 
-</body>
-</html>
+    <!-- ⚙️ パスワード変更フォーム（管理者専用） -->
+    <div class="form-box" style="margin-top: 40px; border-top: 4px solid #6c757d;">
+        <h3>⚙️ パスワード設定変更 / Change Passwords</h3>
+        {% if success %}<p style="color: green; font-weight: bold; text-align: center;">{{ success }}</p>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label>新しい閲覧パスワード <span class="lang-en">New View Password (for students)</span></label>
+                <input type="text" name="new_view_password" placeholder="例：5678" required>
+            </div>
+            <div class="form-group">
+                <label>新しい書き込みパスワード <span class="lang-en">New Write Password (for admins)</span></label>
+                <input type="text" name="new_write_password" placeholder="例：efgh" required>
+            </div>
+            <div class="form-group">
+                <label style="color: #dc3545;">現在の書き込みパスワード（本人確認） <span class="lang-en" style="color: #dc3545;">Current Write Password (for safety)</span></label>
