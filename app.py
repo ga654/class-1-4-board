@@ -1,14 +1,21 @@
+import json
 import requests
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from pywebpush import WebPushException, webpush
 
 app = Flask(__name__)
 app.secret_key = "class_1_4_secret_key_999"
 
 # ========================================================
-# 🔗 Supabaseの設定情報（設定済み）
+# 🔗 Supabase ＆ プッシュ通知（VAPID）の設定
 # ========================================================
 SUPABASE_URL = "https://lhdalwtppyufudtjkxtk.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoZGFsd3RwcHl1ZnVkdGpreHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNTA2NzMsImV4cCI6MjEwNzcyNjY3M30.I5ePEyIV3o6tUNyf7zq78SC1MdMYMK4nBKm2057Onjg"
+
+# 🔑 【ここにさっき取得した鍵を貼り付けてください】
+VAPID_PUBLIC_KEY = "BIaxU3i84TQorBGdAXL0IWaCXVjNAgaDM5p8rHdWGG19ZLhn3WOmaI2yMHP7pfR-ehpsD6R0oi0bUXDroyGuNak"
+VAPID_PRIVATE_KEY = "zGVHtLa6eKh3k0uJfE7x0vcL_efXh27cdAP7tOhfCWg"
+VAPID_CLAIMS = {"sub": "mailto:admin@example.com"}
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -32,12 +39,29 @@ def get_data_from_supabase(table_name):
     return []
 
 
+def send_push_notification(title, body):
+    subscriptions = get_data_from_supabase("subscriptions")
+    for sub in subscriptions:
+        subscription_info = {
+            "endpoint": sub.get("endpoint"),
+            "keys": {"p256dh": sub.get("p256dh"), "auth": sub.get("auth")},
+        }
+        try:
+            webpush(
+                subscription_info=subscription_info,
+                data=json.dumps({"title": title, "body": body}),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS,
+            )
+        except Exception as e:
+            print(f"Push notification error: {e}")
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     error = None
     success = None
 
-    # パスワードをSupabaseから取得
     password_data = get_data_from_supabase("passwords")
     VIEW_PASSWORD = "1234"
     WRITE_PASSWORD = "abcd"
@@ -80,6 +104,10 @@ def index():
                         headers=HEADERS,
                         timeout=5,
                     )
+                    send_push_notification(
+                        "新しい宿題が追加されました！",
+                        f"教科: {subject}\n内容: {content}",
+                    )
                 except Exception as e:
                     print(f"Error posting: {e}")
                 return redirect(url_for("index"))
@@ -113,7 +141,6 @@ def index():
     homework_list = get_data_from_supabase("homework")
     if not isinstance(homework_list, list):
         homework_list = []
-    # 新しい順に並び替え
     homework_list = sorted(
         homework_list, key=lambda x: x.get("id", 0), reverse=True
     )
@@ -125,7 +152,30 @@ def index():
         error=error,
         success=success,
         is_logged_in=is_logged_in,
+        vapid_public_key=VAPID_PUBLIC_KEY,
     )
+
+
+@app.route("/save-subscription", methods=["POST"])
+def save_subscription():
+    sub_data = request.get_json()
+    endpoint = sub_data.get("endpoint")
+    keys = sub_data.get("keys", {})
+    p256dh = keys.get("p256dh")
+    auth = keys.get("auth")
+
+    payload = {"endpoint": endpoint, "p256dh": p256dh, "auth": auth}
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/subscriptions",
+            json=payload,
+            headers=HEADERS,
+            timeout=5,
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error saving subscription: {e}")
+        return jsonify({"success": False}), 500
 
 
 @app.route("/delete/<int:post_id>", methods=["POST"])
