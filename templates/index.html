@@ -48,18 +48,55 @@
             .then(() => console.log('Service Worker Registered'));
         }
 
-        function requestNotificationPermission() {
-            if (!('Notification' in window)) {
+        // サーバーから渡された公開鍵をセット
+        const publicVapidKey = "{{ vapid_public_key }}";
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function requestNotificationPermission() {
+            if (!('Notification' in window) || !('PushManager' in window)) {
                 alert('This browser does not support notifications. / このブラウザは通知に対応していません。');
                 return;
             }
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    alert('Notifications enabled! / 通知が許可されました！');
-                } else {
+
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
                     alert('Notifications blocked. / 通知がブロックされました。');
+                    return;
                 }
-            });
+
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                });
+
+                // Flaskサーバー（Supabase）に購読情報を送信
+                const response = await fetch('/save-subscription', {
+                    method: 'POST',
+                    body: JSON.stringify(subscription),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    alert('Notifications enabled! / 通知の設定が完了しました！');
+                } else {
+                    alert('Failed to save on server. / サーバーへの保存に失敗しました。');
+                }
+            } catch (err) {
+                console.error('Push subscription error:', err);
+                alert('通知の登録中にエラーが発生しました。');
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -146,9 +183,9 @@
         <div class="post-card">
             <p class="subject">【{{ post.subject }}】</p>
             <p class="meta">⏰ 期限 / Deadline: <strong>{{ post.deadline }}</strong></p>
-            <p><strong>内容 / Content:</strong><br>{{ post.content }}</p>
+            <p><strong>Content:</strong><br>{{ post.content }}</p>
             {% if post.belongings %}
-            <p>🎒 <strong>持ち物 / Belongings:</strong> <span class="badge">{{ post.belongings }}</span></p>
+            <p>🎒 <strong>Belongings:</strong> <span class="badge">{{ post.belongings }}</span></p>
             {% endif %}
             
             <!-- ❌ 削除用フォーム -->
